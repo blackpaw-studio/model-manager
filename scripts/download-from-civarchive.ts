@@ -331,14 +331,17 @@ function findDownloadUrl(file: CivArchiveFile, versionId: number): string {
 // CLI
 // ---------------------------------------------------------------------------
 
-function parseArgs(): { url: string; modelDir: string } {
+function parseArgs(): { url: string; modelDir: string; outputDir?: string } {
   const args = process.argv.slice(2);
   let url = "";
   let modelDir = DEFAULT_MODEL_DIR;
+  let outputDir: string | undefined;
 
   for (let i = 0; i < args.length; i++) {
     if (args[i] === "--model-dir" && args[i + 1]) {
       modelDir = args[++i];
+    } else if ((args[i] === "--output" || args[i] === "-o") && args[i + 1]) {
+      outputDir = args[++i];
     } else if (!args[i].startsWith("-")) {
       url = args[i];
     }
@@ -346,15 +349,18 @@ function parseArgs(): { url: string; modelDir: string } {
 
   if (!url) {
     console.error(
-      "Usage: npm run download -- <civarchive-url> [--model-dir <path>]"
+      "Usage: npm run download -- <civarchive-url> [--output <folder>] [--model-dir <path>]"
     );
     console.error(
       "Example: npm run download -- https://civarchive.com/models/2189974?modelVersionId=2465814"
     );
+    console.error(
+      "         npm run download -- <url> -o /Volumes/AI/models/loras/qwen/MyModel"
+    );
     process.exit(1);
   }
 
-  return { url, modelDir };
+  return { url, modelDir, outputDir };
 }
 
 // ---------------------------------------------------------------------------
@@ -362,7 +368,7 @@ function parseArgs(): { url: string; modelDir: string } {
 // ---------------------------------------------------------------------------
 
 async function main() {
-  const { url, modelDir } = parseArgs();
+  const { url, modelDir, outputDir: outputDirOverride } = parseArgs();
 
   console.log("CivArchive Downloader");
   console.log("=====================");
@@ -396,13 +402,18 @@ async function main() {
   }
 
   // 3. Determine output directory
-  const typeDir = TYPE_DIR_MAP[model.type] ?? "other";
-  const baseModelDir =
-    BASE_MODEL_DIR_MAP[version.baseModel ?? ""] ??
-    version.baseModel?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ??
-    "unknown";
-  const modelNameClean = model.name.replace(/[<>:"/\\|?*]/g, "");
-  const outputDir = path.join(modelDir, typeDir, baseModelDir, modelNameClean);
+  let outputDir: string;
+  if (outputDirOverride) {
+    outputDir = path.resolve(outputDirOverride);
+  } else {
+    const typeDir = TYPE_DIR_MAP[model.type] ?? "other";
+    const baseModelDir =
+      BASE_MODEL_DIR_MAP[version.baseModel ?? ""] ??
+      version.baseModel?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ??
+      "unknown";
+    const modelNameClean = model.name.replace(/[<>:"/\\|?*]/g, "");
+    outputDir = path.join(modelDir, typeDir, baseModelDir, modelNameClean);
+  }
   const extraDataDir = path.join(outputDir, `extra_data-vid_${version.id}`);
 
   console.log(`Output: ${outputDir}`);
