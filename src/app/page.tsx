@@ -1,9 +1,18 @@
+import { getDatabase } from "../db";
+import { getModels, getFilterOptions } from "../db/queries/models";
+import { Gallery } from "../components/gallery/gallery";
+import { NsfwProvider } from "../components/providers/nsfw-provider";
+
+export const dynamic = "force-dynamic";
+
 export default function Home() {
+  const db = getDatabase();
+  const initialData = getModels(db, { page: 1, limit: 40 });
+  const filterOptions = getFilterOptions(db);
+
   return (
-    <div className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-semibold text-foreground/60">
-        Model Manager
-      </h1>
-    </div>
+    <NsfwProvider>
+      <Gallery initialData={initialData} initialFilters={filterOptions} />
+    </NsfwProvider>
   );
 }
