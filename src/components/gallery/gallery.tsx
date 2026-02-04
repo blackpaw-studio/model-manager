@@ -103,7 +103,7 @@ export function Gallery({ initialData, initialFilters }: GalleryProps) {
         total={total}
         onFilterChange={setFilters}
       />
-      <main className="mx-auto max-w-[1800px] px-4 pt-4 pb-8">
+      <main className="mx-auto max-w-[1800px] px-4 pt-[7.5rem] pb-8">
         <ModelGrid
           models={models}
           hasMore={hasMore}
