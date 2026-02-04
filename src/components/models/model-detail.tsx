@@ -101,7 +101,6 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
   const [selectedVersion, setSelectedVersion] = useState<VersionDetail>(
     model.versions[0]
   );
-  const [showFullDesc, setShowFullDesc] = useState(false);
 
   if (!model.hasMetadata) {
     return <ModelPlaceholder model={model} />;
@@ -211,22 +210,11 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
               Description
             </h2>
             <div
-              className={cn(
-                "prose prose-sm prose-invert max-w-none rounded-xl border border-border bg-card p-4 overflow-hidden",
-                !showFullDesc && "max-h-48"
-              )}
+              className="prose prose-sm prose-invert max-w-none rounded-xl border border-border bg-card p-4"
               dangerouslySetInnerHTML={{
                 __html: sanitizeHtml(model.description),
               }}
             />
-            {model.description.length > 500 && (
-              <button
-                onClick={() => setShowFullDesc(!showFullDesc)}
-                className="mt-2 text-sm text-accent hover:text-accent/80 transition-colors"
-              >
-                {showFullDesc ? "Show less" : "Show more"}
-              </button>
-            )}
           </div>
         )}
 
