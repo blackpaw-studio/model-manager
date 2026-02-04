@@ -1,0 +1,15 @@
+services:
+  model-manager:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - /volume1/AI/models:/data/models:ro
+      - app-data:/app/.data
+    environment:
+      - MODEL_DIR=/data/models
+      - DATA_DIR=/app/.data
+    restart: unless-stopped
+
+volumes:
+  app-data:
