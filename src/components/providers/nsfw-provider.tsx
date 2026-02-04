@@ -23,12 +23,13 @@ interface NsfwContextValue {
 const NsfwContext = createContext<NsfwContextValue | null>(null);
 
 const STORAGE_KEY = "model-manager-nsfw-level";
+const REVEAL_ALL_KEY = "model-manager-nsfw-reveal-all";
 const DEFAULT_MAX_LEVEL = 2; // blur Mature (8) and above by default
 
 export function NsfwProvider({ children }: { children: ReactNode }) {
   const [maxNsfwLevel, setMaxNsfwLevelState] = useState(DEFAULT_MAX_LEVEL);
   const [revealedIds, setRevealedIds] = useState<Set<number>>(new Set());
-  const [revealAll, setRevealAll] = useState(false);
+  const [revealAll, setRevealAllState] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -36,7 +37,19 @@ export function NsfwProvider({ children }: { children: ReactNode }) {
     if (stored != null) {
       setMaxNsfwLevelState(parseInt(stored, 10));
     }
+    if (sessionStorage.getItem(REVEAL_ALL_KEY) === "true") {
+      setRevealAllState(true);
+    }
     setLoaded(true);
+  }, []);
+
+  const setRevealAll = useCallback((val: boolean) => {
+    setRevealAllState(val);
+    if (val) {
+      sessionStorage.setItem(REVEAL_ALL_KEY, "true");
+    } else {
+      sessionStorage.removeItem(REVEAL_ALL_KEY);
+    }
   }, []);
 
   const setMaxNsfwLevel = useCallback((level: number) => {
