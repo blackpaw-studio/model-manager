@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { getDatabase } from "../db";
 import { getModels, getFilterOptions } from "../db/queries/models";
 import type { ModelFilters } from "../db/queries/models";
@@ -32,9 +31,7 @@ export default async function Home({
 
   return (
     <NsfwProvider>
-      <Suspense>
-        <Gallery initialData={initialData} initialFilters={filterOptions} />
-      </Suspense>
+      <Gallery initialData={initialData} initialFilters={filterOptions} />
     </NsfwProvider>
   );
 }
