@@ -9,6 +9,7 @@ import {
   FileText,
   Tag,
   ChevronDown,
+  ExternalLink,
 } from "lucide-react";
 import { cn, formatNumber, formatFileSize, formatSizeKb, sanitizeHtml } from "../../lib/utils";
 import { ImageGallery } from "../images/image-gallery";
@@ -164,8 +165,8 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
               )}
             </div>
 
-            {/* Stats */}
-            <div className="flex gap-4 text-sm text-muted">
+            {/* Stats + CivitAI link */}
+            <div className="flex items-center gap-4 text-sm text-muted">
               {model.stats.downloadCount != null && (
                 <div className="flex items-center gap-1.5">
                   <Download className="h-4 w-4" />
@@ -177,6 +178,17 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
                   <ThumbsUp className="h-4 w-4" />
                   <span>{formatNumber(model.stats.thumbsUpCount)}</span>
                 </div>
+              )}
+              {model.hasMetadata && (
+                <a
+                  href={`https://civitai.com/models/${model.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-muted hover:text-accent transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  <span>CivitAI</span>
+                </a>
               )}
             </div>
           </div>
