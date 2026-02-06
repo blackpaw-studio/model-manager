@@ -69,6 +69,8 @@ export interface VersionDetail {
   publishedAt: string | null;
   trainedWords: string[];
   isLocal: boolean;
+  localPath: string | null;
+  localFileSize: number | null;
   files: FileDetail[];
   images: ImageInfo[];
 }

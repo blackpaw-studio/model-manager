@@ -50,6 +50,8 @@ export const modelVersions = sqliteTable("model_versions", {
   publishedAt: text("published_at"),
   trainedWords: text("trained_words", { mode: "json" }).$type<string[]>(),
   isLocal: integer("is_local", { mode: "boolean" }).notNull().default(false),
+  localPath: text("local_path"),
+  localFileSize: real("local_file_size"),
 });
 
 export const modelFiles = sqliteTable("model_files", {

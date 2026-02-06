@@ -104,15 +104,26 @@ export async function runScanner(config: AppConfig): Promise<ScanResult> {
 
     // Insert versions from model dict (only once per model)
     if (primary.modelDict?.modelVersions) {
-      const localVersionIds = new Set(
-        groupEntries
-          .map((e) => e.versionId)
-          .filter((id): id is number => id != null)
-      );
+      // Build map of versionId -> local file info
+      const localVersionMap = new Map<
+        number,
+        { path: string; size: number }
+      >();
+      for (const entry of groupEntries) {
+        if (entry.versionId) {
+          const stats = fs.statSync(entry.safetensorsPath);
+          localVersionMap.set(entry.versionId, {
+            path: entry.safetensorsPath,
+            size: stats.size,
+          });
+        }
+      }
 
       for (const version of primary.modelDict.modelVersions) {
         if (insertedVersionIds.has(version.id)) continue;
         insertedVersionIds.add(version.id);
+
+        const localInfo = localVersionMap.get(version.id);
 
         db.insert(modelVersions)
           .values({
@@ -124,7 +135,9 @@ export async function runScanner(config: AppConfig): Promise<ScanResult> {
             stats: version.stats ?? {},
             publishedAt: version.publishedAt ?? null,
             trainedWords: version.trainedWords ?? [],
-            isLocal: localVersionIds.has(version.id),
+            isLocal: localInfo != null,
+            localPath: localInfo?.path ?? null,
+            localFileSize: localInfo?.size ?? null,
           })
           .run();
 
@@ -155,6 +168,7 @@ export async function runScanner(config: AppConfig): Promise<ScanResult> {
     for (const entry of groupEntries) {
       if (entry.versionId && !insertedVersionIds.has(entry.versionId)) {
         insertedVersionIds.add(entry.versionId);
+        const stats = fs.statSync(entry.safetensorsPath);
         db.insert(modelVersions)
           .values({
             id: entry.versionId,
@@ -166,6 +180,8 @@ export async function runScanner(config: AppConfig): Promise<ScanResult> {
             publishedAt: null,
             trainedWords: [],
             isLocal: true,
+            localPath: entry.safetensorsPath,
+            localFileSize: stats.size,
           })
           .run();
       }

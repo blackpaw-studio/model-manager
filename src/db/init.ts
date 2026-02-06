@@ -34,7 +34,9 @@ CREATE TABLE IF NOT EXISTS model_versions (
   stats TEXT,
   published_at TEXT,
   trained_words TEXT,
-  is_local INTEGER NOT NULL DEFAULT 0
+  is_local INTEGER NOT NULL DEFAULT 0,
+  local_path TEXT,
+  local_file_size REAL
 );
 
 CREATE TABLE IF NOT EXISTS model_files (

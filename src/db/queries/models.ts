@@ -221,6 +221,8 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
       publishedAt: v.publishedAt,
       trainedWords: (v.trainedWords as string[]) ?? [],
       isLocal: v.isLocal,
+      localPath: v.localPath,
+      localFileSize: v.localFileSize,
       files,
       images: versionImages,
     };

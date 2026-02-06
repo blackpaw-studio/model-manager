@@ -316,22 +316,24 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
         )}
 
         {/* File info */}
-        <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted">
-          <div className="flex gap-6">
-            <div>
-              <span className="text-foreground/60">Local file:</span>{" "}
-              <span className="font-mono text-foreground/80 text-xs">
-                {model.filePath.split("/").pop()}
-              </span>
-            </div>
-            {model.fileSize && (
+        {selectedVersion?.localPath && (
+          <div className="rounded-xl border border-border bg-card p-4 text-sm text-muted">
+            <div className="flex gap-6">
               <div>
-                <span className="text-foreground/60">Size:</span>{" "}
-                {formatFileSize(model.fileSize)}
+                <span className="text-foreground/60">Local file:</span>{" "}
+                <span className="font-mono text-foreground/80 text-xs">
+                  {selectedVersion.localPath.split("/").pop()}
+                </span>
               </div>
-            )}
+              {selectedVersion.localFileSize && (
+                <div>
+                  <span className="text-foreground/60">Size:</span>{" "}
+                  {formatFileSize(selectedVersion.localFileSize)}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
