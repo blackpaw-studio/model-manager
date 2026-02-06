@@ -5,6 +5,8 @@ import type {
   ModelListItem,
   ModelDetail,
   VersionDetail,
+  VersionSummary,
+  FileDetail,
   ImageInfo,
   FilterOptions,
   PaginatedResult,
@@ -22,6 +24,7 @@ export interface ModelFilters {
   sort?: "newest" | "oldest" | "name" | "downloads" | "likes";
   page?: number;
   limit?: number;
+  include?: string[];
 }
 
 export function getModels(
@@ -132,9 +135,70 @@ export function getModels(
 
   const heroMap = new Map(heroImages.map((img) => [img.modelId, img]));
 
+  // Optionally fetch versions with files
+  const includeVersions = filters.include?.includes("versions");
+  let versionsMap = new Map<number, VersionSummary[]>();
+
+  if (includeVersions && modelIds.length > 0) {
+    const allVersions = db
+      .select()
+      .from(modelVersions)
+      .where(inArray(modelVersions.modelId, modelIds))
+      .all();
+
+    const versionIds = allVersions.map((v) => v.id);
+    const allFiles =
+      versionIds.length > 0
+        ? db
+            .select()
+            .from(modelFiles)
+            .where(inArray(modelFiles.versionId, versionIds))
+            .all()
+        : [];
+
+    // Group files by versionId
+    const filesMap = new Map<number, FileDetail[]>();
+    for (const f of allFiles) {
+      const files = filesMap.get(f.versionId) ?? [];
+      files.push({
+        id: f.id,
+        fileName: f.fileName,
+        sizeKb: f.sizeKb,
+        format: f.format,
+        precision: f.precision,
+      });
+      filesMap.set(f.versionId, files);
+    }
+
+    // Group versions by modelId
+    for (const v of allVersions) {
+      const versions = versionsMap.get(v.modelId) ?? [];
+      versions.push({
+        id: v.id,
+        name: v.name,
+        baseModel: v.baseModel,
+        isLocal: v.isLocal,
+        localPath: v.localPath,
+        localFileSize: v.localFileSize,
+        files: filesMap.get(v.id) ?? [],
+      });
+      versionsMap.set(v.modelId, versions);
+    }
+
+    // Sort versions: local first
+    for (const [modelId, versions] of versionsMap) {
+      versions.sort((a, b) => {
+        if (a.isLocal && !b.isLocal) return -1;
+        if (!a.isLocal && b.isLocal) return 1;
+        return 0;
+      });
+      versionsMap.set(modelId, versions);
+    }
+  }
+
   const items: ModelListItem[] = rows.map((row) => {
     const hero = heroMap.get(row.id);
-    return {
+    const item: ModelListItem = {
       id: row.id,
       name: row.name,
       type: row.type,
@@ -158,6 +222,12 @@ export function getModels(
           }
         : null,
     };
+
+    if (includeVersions) {
+      item.versions = versionsMap.get(row.id) ?? [];
+    }
+
+    return item;
   });
 
   return {

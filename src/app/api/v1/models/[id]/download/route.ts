@@ -10,7 +10,7 @@ import { withApiAuth } from "../../../../../../lib/api-auth";
 export const dynamic = "force-dynamic";
 
 async function handler(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
@@ -27,7 +27,36 @@ async function handler(
     return NextResponse.json({ error: "Model not found" }, { status: 404 });
   }
 
-  const filePath = model.filePath;
+  // Check for versionId query parameter
+  const { searchParams } = request.nextUrl;
+  const versionIdParam = searchParams.get("versionId");
+
+  let filePath: string | null = null;
+
+  if (versionIdParam) {
+    const versionId = parseInt(versionIdParam, 10);
+    if (isNaN(versionId)) {
+      return NextResponse.json({ error: "Invalid version ID" }, { status: 400 });
+    }
+
+    const version = model.versions.find((v) => v.id === versionId);
+    if (!version) {
+      return NextResponse.json({ error: "Version not found" }, { status: 404 });
+    }
+
+    if (!version.localPath) {
+      return NextResponse.json(
+        { error: "Version file not available locally" },
+        { status: 404 }
+      );
+    }
+
+    filePath = version.localPath;
+  } else {
+    // Default to first local version or model.filePath
+    const localVersion = model.versions.find((v) => v.isLocal && v.localPath);
+    filePath = localVersion?.localPath ?? model.filePath;
+  }
   if (!filePath) {
     return NextResponse.json(
       { error: "Model has no file path" },

@@ -43,6 +43,9 @@ async function handler(request: NextRequest) {
   const limit = searchParams.get("limit");
   if (limit) filters.limit = Math.min(parseInt(limit, 10), 100);
 
+  const include = searchParams.get("include");
+  if (include) filters.include = include.split(",").filter(Boolean);
+
   const db = getDatabase();
   const result = getModels(db, filters);
 

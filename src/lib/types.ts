@@ -1,3 +1,13 @@
+export interface VersionSummary {
+  id: number;
+  name: string;
+  baseModel: string | null;
+  isLocal: boolean;
+  localPath: string | null;
+  localFileSize: number | null;
+  files: FileDetail[];
+}
+
 export interface ModelListItem {
   id: number;
   name: string;
@@ -22,6 +32,7 @@ export interface ModelListItem {
     nsfwLevel: number;
     blurhash: string | null;
   } | null;
+  versions?: VersionSummary[];
 }
 
 export interface ModelDetail {
