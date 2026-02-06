@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, Settings, RefreshCw, Eye } from "lucide-react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Search, Settings, RefreshCw, Eye, User, LogOut } from "lucide-react";
 import { useNsfw } from "../providers/nsfw-provider";
 import { cn } from "../../lib/utils";
 
@@ -27,9 +29,16 @@ export function TopBar({
   onRescan,
   isScanning,
 }: TopBarProps) {
+  const router = useRouter();
   const { maxNsfwLevel, setMaxNsfwLevel } = useNsfw();
   const [showSettings, setShowSettings] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  async function handleLogout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+    router.refresh();
+  }
 
   const handleClickOutside = useCallback((e: MouseEvent) => {
     if (
@@ -101,7 +110,7 @@ export function TopBar({
                   </div>
                 </div>
 
-                <div className="border-t border-border pt-3">
+                <div className="border-t border-border pt-3 space-y-1">
                   <button
                     onClick={() => {
                       onRescan();
@@ -117,6 +126,27 @@ export function TopBar({
                       )}
                     />
                     {isScanning ? "Scanning..." : "Re-scan Models"}
+                  </button>
+                </div>
+
+                <div className="border-t border-border pt-3 space-y-1">
+                  <Link
+                    href="/account"
+                    onClick={() => setShowSettings(false)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-foreground/80 hover:bg-card-hover transition-colors"
+                  >
+                    <User className="h-3.5 w-3.5" />
+                    Account Settings
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setShowSettings(false);
+                      handleLogout();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-sm text-red-400 hover:bg-red-500/10 transition-colors"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                    Sign Out
                   </button>
                 </div>
               </div>
