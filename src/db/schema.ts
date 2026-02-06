@@ -101,7 +101,46 @@ export const images = sqliteTable("images", {
   sortOrder: integer("sort_order").default(0),
 });
 
+// User-managed tables (no FK constraints to survive rescans)
+export const userNotes = sqliteTable("user_notes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  modelId: integer("model_id").notNull().unique(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const userImages = sqliteTable("user_images", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  modelId: integer("model_id").notNull(),
+  localPath: text("local_path").notNull(),
+  thumbPath: text("thumb_path"),
+  width: integer("width"),
+  height: integer("height"),
+  nsfwLevel: integer("nsfw_level").default(0),
+  prompt: text("prompt"),
+  generationParams: text("generation_params", { mode: "json" }).$type<{
+    seed?: number;
+    steps?: number;
+    sampler?: string;
+    cfgScale?: number;
+    scheduler?: string;
+    denoise?: number;
+    loras?: Array<{ name: string; strength: number }>;
+    vaes?: string[];
+    width?: number;
+    height?: number;
+    negativePrompt?: string;
+    comfyWorkflow?: Record<string, unknown>;
+  }>(),
+  blurhash: text("blurhash"),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: text("created_at").notNull(),
+});
+
 export type Model = typeof models.$inferSelect;
 export type ModelVersion = typeof modelVersions.$inferSelect;
 export type ModelFile = typeof modelFiles.$inferSelect;
 export type Image = typeof images.$inferSelect;
+export type UserNote = typeof userNotes.$inferSelect;
+export type UserImage = typeof userImages.$inferSelect;

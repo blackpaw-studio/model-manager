@@ -1,5 +1,5 @@
 import { eq, like, desc, asc, sql, and, inArray } from "drizzle-orm";
-import { models, modelVersions, modelFiles, images } from "../schema";
+import { models, modelVersions, modelFiles, images, userNotes, userImages } from "../schema";
 import type { DB } from "../index";
 import type {
   ModelListItem,
@@ -243,6 +243,34 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
   const model = db.select().from(models).where(eq(models.id, id)).get();
   if (!model) return null;
 
+  // Get user note for this model
+  const note = db
+    .select()
+    .from(userNotes)
+    .where(eq(userNotes.modelId, id))
+    .get();
+
+  // Get user-uploaded images for this model
+  const userUploadedImages = db
+    .select()
+    .from(userImages)
+    .where(eq(userImages.modelId, id))
+    .orderBy(asc(userImages.sortOrder))
+    .all()
+    .map((img) => ({
+      id: img.id,
+      localPath: img.localPath,
+      thumbPath: img.thumbPath,
+      width: img.width,
+      height: img.height,
+      nsfwLevel: img.nsfwLevel ?? 0,
+      prompt: img.prompt,
+      generationParams: img.generationParams as ImageInfo["generationParams"],
+      blurhash: img.blurhash,
+      sortOrder: img.sortOrder ?? 0,
+      isUserUpload: true,
+    }));
+
   const versions = db
     .select()
     .from(modelVersions)
@@ -280,8 +308,11 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
         generationParams: img.generationParams as ImageInfo["generationParams"],
         blurhash: img.blurhash,
         sortOrder: img.sortOrder ?? 0,
+        isUserUpload: false,
       }));
 
+    // Merge user-uploaded images into the first version's images
+    // (user images are model-level, not version-specific)
     return {
       id: v.id,
       name: v.name,
@@ -305,6 +336,14 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
     return 0;
   });
 
+  // Add user-uploaded images to the first version (or create a synthetic version if none exist)
+  if (userUploadedImages.length > 0) {
+    if (versionDetails.length > 0) {
+      // Prepend user images to the first version's images
+      versionDetails[0].images = [...userUploadedImages, ...versionDetails[0].images];
+    }
+  }
+
   return {
     id: model.id,
     name: model.name,
@@ -325,6 +364,7 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
       (model.licensingInfo as ModelDetail["licensingInfo"]) ?? {},
     hasMetadata: model.hasMetadata,
     versions: versionDetails,
+    notes: note?.content ?? null,
   };
 }
 

@@ -64,6 +64,33 @@ CREATE TABLE IF NOT EXISTS images (
   blurhash TEXT,
   sort_order INTEGER DEFAULT 0
 );
+
+CREATE TABLE IF NOT EXISTS user_notes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model_id INTEGER NOT NULL UNIQUE,
+  content TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_notes_model_id ON user_notes(model_id);
+
+CREATE TABLE IF NOT EXISTS user_images (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  model_id INTEGER NOT NULL,
+  local_path TEXT NOT NULL,
+  thumb_path TEXT,
+  width INTEGER,
+  height INTEGER,
+  nsfw_level INTEGER DEFAULT 0,
+  prompt TEXT,
+  generation_params TEXT,
+  blurhash TEXT,
+  sort_order INTEGER DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_images_model_id ON user_images(model_id);
 `;
 
 // Migrations to run on existing databases

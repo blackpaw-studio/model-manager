@@ -33,7 +33,7 @@ export async function GET(
   }
 
   // Verify the file is within allowed directories
-  const allowedPrefixes = [config.modelDir, config.thumbDir];
+  const allowedPrefixes = [config.modelDir, config.thumbDir, config.uploadDir];
   const isAllowed = allowedPrefixes.some((prefix) =>
     normalizedPath.startsWith(prefix)
   );

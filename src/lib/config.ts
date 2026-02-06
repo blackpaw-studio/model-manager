@@ -5,6 +5,7 @@ export interface AppConfig {
   dataDir: string;
   dbPath: string;
   thumbDir: string;
+  uploadDir: string;
 }
 
 export function createConfig(overrides?: Partial<AppConfig>): AppConfig {
@@ -23,6 +24,7 @@ export function createConfig(overrides?: Partial<AppConfig>): AppConfig {
     dataDir,
     dbPath: overrides?.dbPath ?? path.join(dataDir, "models.db"),
     thumbDir: overrides?.thumbDir ?? path.join(dataDir, "thumbs"),
+    uploadDir: overrides?.uploadDir ?? path.join(dataDir, "uploads"),
   };
 }
 

@@ -65,6 +65,7 @@ export interface ModelDetail {
   };
   hasMetadata: boolean;
   versions: VersionDetail[];
+  notes?: string | null;
 }
 
 export interface VersionDetail {
@@ -105,6 +106,7 @@ export interface ImageInfo {
   generationParams: GenerationParams | null;
   blurhash: string | null;
   sortOrder: number;
+  isUserUpload?: boolean;
 }
 
 export interface GenerationParams {
@@ -120,6 +122,7 @@ export interface GenerationParams {
   height?: number;
   negativePrompt?: string;
   prompt?: string;
+  comfyWorkflow?: Record<string, unknown>;
 }
 
 export interface FilterOptions {

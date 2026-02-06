@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Download,
@@ -14,6 +15,9 @@ import {
 import { cn, formatNumber, formatFileSize, formatSizeKb, sanitizeHtml } from "../../lib/utils";
 import { ImageGallery } from "../images/image-gallery";
 import { ModelPlaceholder } from "./model-placeholder";
+import { NotesEditor } from "./notes-editor";
+import { UploadButton } from "../images/upload-button";
+import { UploadDialog } from "../images/upload-dialog";
 import type { ModelDetail, VersionDetail } from "../../lib/types";
 
 const TYPE_COLORS: Record<string, string> = {
@@ -99,13 +103,20 @@ function VersionSelector({
 }
 
 export function ModelDetailView({ model }: { model: ModelDetail }) {
+  const router = useRouter();
   const [selectedVersion, setSelectedVersion] = useState<VersionDetail>(
     model.versions[0]
   );
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
 
   if (!model.hasMetadata) {
     return <ModelPlaceholder model={model} />;
   }
+
+  const handleUploadSuccess = () => {
+    setUploadFile(null);
+    router.refresh();
+  };
 
   const typeColor =
     TYPE_COLORS[model.type] ?? "bg-zinc-500/20 text-zinc-400";
@@ -208,11 +219,24 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
         )}
 
         {/* Image gallery */}
-        {displayImages.length > 0 && (
-          <div className="mb-8">
-            <ImageGallery images={displayImages} />
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+              Images
+            </h2>
+            <UploadButton onFileSelect={setUploadFile} />
           </div>
-        )}
+          {displayImages.length > 0 ? (
+            <ImageGallery images={displayImages} />
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
+              <p className="text-sm text-muted">No images yet. Upload some!</p>
+            </div>
+          )}
+        </div>
+
+        {/* Notes */}
+        <NotesEditor modelId={model.id} initialNotes={model.notes ?? null} />
 
         {/* Description */}
         {model.description && (
@@ -335,6 +359,16 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
           </div>
         )}
       </div>
+
+      {/* Upload dialog */}
+      {uploadFile && (
+        <UploadDialog
+          file={uploadFile}
+          modelId={model.id}
+          onClose={() => setUploadFile(null)}
+          onSuccess={handleUploadSuccess}
+        />
+      )}
     </div>
   );
 }

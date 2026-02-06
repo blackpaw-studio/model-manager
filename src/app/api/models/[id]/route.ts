@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDatabase } from "../../../../db";
-import { models } from "../../../../db/schema";
+import { models, userNotes } from "../../../../db/schema";
 import { getModelById } from "../../../../db/queries/models";
 
 export const dynamic = "force-dynamic";
@@ -59,14 +59,45 @@ export async function PATCH(
     updates.name = body.name;
   }
 
-  if (Object.keys(updates).length === 0) {
-    return NextResponse.json({ error: "No valid fields to update" }, { status: 400 });
+  // Handle notes separately (stored in user_notes table)
+  if (body.notes !== undefined) {
+    const now = new Date().toISOString();
+    const existingNote = db
+      .select()
+      .from(userNotes)
+      .where(eq(userNotes.modelId, modelId))
+      .get();
+
+    if (body.notes === null || body.notes === "") {
+      // Delete note if empty
+      if (existingNote) {
+        db.delete(userNotes).where(eq(userNotes.modelId, modelId)).run();
+      }
+    } else if (existingNote) {
+      // Update existing note
+      db.update(userNotes)
+        .set({ content: body.notes, updatedAt: now })
+        .where(eq(userNotes.modelId, modelId))
+        .run();
+    } else {
+      // Create new note
+      db.insert(userNotes)
+        .values({
+          modelId,
+          content: body.notes,
+          createdAt: now,
+          updatedAt: now,
+        })
+        .run();
+    }
   }
 
-  db.update(models)
-    .set(updates)
-    .where(eq(models.id, modelId))
-    .run();
+  if (Object.keys(updates).length > 0) {
+    db.update(models)
+      .set(updates)
+      .where(eq(models.id, modelId))
+      .run();
+  }
 
   // Return updated model
   const updated = getModelById(db, modelId);

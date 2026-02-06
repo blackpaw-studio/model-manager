@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Copy, Check } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import type { ImageInfo, GenerationParams } from "../../lib/types";
@@ -37,6 +37,8 @@ function GenerationParamsPanel({
   prompt: string | null;
 }) {
   const [copied, setCopied] = useState(false);
+  const [workflowExpanded, setWorkflowExpanded] = useState(false);
+  const [workflowCopied, setWorkflowCopied] = useState(false);
   const displayPrompt = prompt ?? params?.prompt;
 
   const handleCopyPrompt = useCallback(() => {
@@ -45,6 +47,13 @@ function GenerationParamsPanel({
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }, [displayPrompt]);
+
+  const handleCopyWorkflow = useCallback(() => {
+    if (!params?.comfyWorkflow) return;
+    navigator.clipboard.writeText(JSON.stringify(params.comfyWorkflow, null, 2));
+    setWorkflowCopied(true);
+    setTimeout(() => setWorkflowCopied(false), 2000);
+  }, [params?.comfyWorkflow]);
 
   if (!params && !displayPrompt) return null;
 
@@ -143,6 +152,47 @@ function GenerationParamsPanel({
                 <p className="text-sm text-foreground/60 leading-relaxed bg-background rounded-lg p-3 border border-border/50">
                   {params.negativePrompt}
                 </p>
+              </div>
+            )}
+
+            {params.comfyWorkflow && (
+              <div>
+                <button
+                  onClick={() => setWorkflowExpanded(!workflowExpanded)}
+                  className="flex items-center justify-between w-full text-xs text-muted hover:text-foreground transition-colors"
+                >
+                  <span>ComfyUI Workflow</span>
+                  {workflowExpanded ? (
+                    <ChevronUp className="h-3 w-3" />
+                  ) : (
+                    <ChevronDown className="h-3 w-3" />
+                  )}
+                </button>
+                {workflowExpanded && (
+                  <div className="mt-2">
+                    <div className="flex justify-end mb-1">
+                      <button
+                        onClick={handleCopyWorkflow}
+                        className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+                      >
+                        {workflowCopied ? (
+                          <>
+                            <Check className="h-3 w-3" />
+                            Copied
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-3 w-3" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="text-xs text-foreground/60 bg-background rounded-lg p-3 border border-border/50 overflow-x-auto max-h-60 overflow-y-auto">
+                      {JSON.stringify(params.comfyWorkflow, null, 2)}
+                    </pre>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -1,10 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, FileText, ChevronDown, Pencil, Check, X } from "lucide-react";
+import { ArrowLeft, FileText, ChevronDown, Pencil, Check, X, Upload } from "lucide-react";
 import { cn, formatFileSize } from "../../lib/utils";
+import { NotesEditor } from "./notes-editor";
+import { ImageGallery } from "../images/image-gallery";
+import { UploadButton } from "../images/upload-button";
+import { UploadDialog } from "../images/upload-dialog";
 import type { ModelDetail, VersionDetail } from "../../lib/types";
 
 const BASE_MODEL_OPTIONS = [
@@ -77,6 +81,8 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
   const [editing, setEditing] = useState(false);
   const [baseModel, setBaseModel] = useState(model.baseModel ?? "");
   const [saving, setSaving] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   async function handleSave() {
     setSaving(true);
@@ -94,6 +100,33 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
       setSaving(false);
     }
   }
+
+  const handleUploadSuccess = () => {
+    setUploadFile(null);
+    router.refresh();
+  };
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      setUploadFile(file);
+    }
+  }, []);
+
+  // Get user-uploaded images from first version
+  const displayImages = selectedVersion?.images.filter(img => img.isUserUpload) ?? [];
 
   return (
     <div className="min-h-screen pb-12">
@@ -182,18 +215,43 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
           </div>
         )}
 
-        {/* Gradient placeholder */}
-        <div className="mb-8 aspect-video rounded-xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 flex items-center justify-center border border-border">
-          <div className="text-center text-muted">
-            <FileText className="mx-auto mb-3 h-12 w-12 text-zinc-700" />
-            <p className="text-lg font-medium text-zinc-600">
-              No preview images available
-            </p>
-            <p className="mt-1 text-sm text-zinc-700">
-              This model was imported without CivitAI metadata
-            </p>
+        {/* Image gallery or dropzone */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+              Images
+            </h2>
+            <UploadButton onFileSelect={setUploadFile} />
           </div>
+
+          {displayImages.length > 0 ? (
+            <ImageGallery images={displayImages} />
+          ) : (
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={cn(
+                "aspect-video rounded-xl bg-gradient-to-br from-zinc-800 via-zinc-900 to-zinc-950 flex items-center justify-center border-2 border-dashed transition-colors cursor-pointer",
+                isDragging ? "border-accent bg-accent/5" : "border-border hover:border-zinc-600"
+              )}
+              onClick={() => document.querySelector<HTMLInputElement>('input[type="file"]')?.click()}
+            >
+              <div className="text-center text-muted">
+                <Upload className="mx-auto mb-3 h-12 w-12 text-zinc-700" />
+                <p className="text-lg font-medium text-zinc-600">
+                  {isDragging ? "Drop image here" : "Drop images or click to upload"}
+                </p>
+                <p className="mt-1 text-sm text-zinc-700">
+                  Add your own preview images for this model
+                </p>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Notes */}
+        <NotesEditor modelId={model.id} initialNotes={model.notes ?? null} />
 
         {/* File info */}
         <div className="rounded-xl border border-border bg-card p-6">
@@ -228,6 +286,16 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
           </div>
         </div>
       </div>
+
+      {/* Upload dialog */}
+      {uploadFile && (
+        <UploadDialog
+          file={uploadFile}
+          modelId={model.id}
+          onClose={() => setUploadFile(null)}
+          onSuccess={handleUploadSuccess}
+        />
+      )}
     </div>
   );
 }
