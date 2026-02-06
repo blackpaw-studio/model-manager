@@ -35,16 +35,24 @@ export function getModels(
   const conditions = [];
 
   if (filters.category) {
-    conditions.push(eq(models.category, filters.category));
+    conditions.push(
+      sql`LOWER(${models.category}) = LOWER(${filters.category})`
+    );
   }
   if (filters.subcategory) {
-    conditions.push(eq(models.subcategory, filters.subcategory));
+    conditions.push(
+      sql`LOWER(${models.subcategory}) = LOWER(${filters.subcategory})`
+    );
   }
   if (filters.baseModel) {
-    conditions.push(eq(models.baseModel, filters.baseModel));
+    conditions.push(
+      sql`LOWER(${models.baseModel}) = LOWER(${filters.baseModel})`
+    );
   }
   if (filters.type) {
-    conditions.push(eq(models.type, filters.type));
+    conditions.push(
+      sql`LOWER(${models.type}) = LOWER(${filters.type})`
+    );
   }
   if (filters.search) {
     conditions.push(like(models.name, `%${filters.search}%`));
