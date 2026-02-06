@@ -8,7 +8,9 @@ import type { ImageInfo, GenerationParams } from "../../lib/types";
 
 function imageUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  return `/api/images${path}`;
+  // Ensure path starts with /
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `/api/images${normalizedPath}`;
 }
 
 function ParamRow({
