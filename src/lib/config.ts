@@ -12,7 +12,7 @@ export function createConfig(overrides?: Partial<AppConfig>): AppConfig {
   const modelDir =
     overrides?.modelDir ??
     process.env.MODEL_DIR ??
-    "/Volumes/AI/models";
+    "/models";
 
   const dataDir =
     overrides?.dataDir ??
