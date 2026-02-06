@@ -17,15 +17,20 @@ export async function GET(
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const { path: pathSegments } = await params;
-  const imagePath = "/" + pathSegments.join("/");
+  let imagePath = "/" + pathSegments.join("/");
+
+  const config = getConfig();
+
+  // Handle relative .data/ paths by converting to absolute
+  if (imagePath.startsWith("/.data/")) {
+    imagePath = path.join(process.cwd(), imagePath.slice(1));
+  }
 
   // Security: prevent directory traversal
   const normalizedPath = path.normalize(imagePath);
   if (normalizedPath.includes("..")) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
-
-  const config = getConfig();
 
   // Verify the file is within allowed directories
   const allowedPrefixes = [config.modelDir, config.thumbDir];
