@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { drizzle, BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import * as schema from "./schema";
 import { getConfig } from "../lib/config";
+import { initDatabase } from "./init";
 import fs from "fs";
 import path from "path";
 
@@ -13,6 +14,9 @@ export function createDatabase(dbPath?: string): DB {
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
+
+  // Auto-initialize schema if the database is new
+  initDatabase();
 
   const sqlite = new Database(resolvedPath);
   sqlite.pragma("journal_mode = WAL");
