@@ -140,51 +140,125 @@ class JobManager {
     this.activeDownloads.set(job.id, activeDownload);
 
     try {
-      // Fetch metadata
       job.status = "downloading";
       this.updateJob(job);
 
-      let metadata: SourceMetadata;
+      let metadata: SourceMetadata | null = null;
 
-      if (job.source === "civarchive") {
-        metadata = await fetchCivArchiveMetadata(job.url);
-      } else if (job.source === "civitai") {
-        const token = getToken("civitai");
-        metadata = await fetchCivitaiMetadata(job.url, token);
-      } else if (job.source === "huggingface") {
-        const token = getToken("huggingface");
-        metadata = await fetchHuggingFaceMetadata(job.url, token);
-      } else {
-        throw new Error(`Unsupported source: ${job.source}`);
+      // Skip metadata fetch if we already have it (retry case)
+      const isRetry = job.downloadUrl && job.filePath && job.modelId;
+
+      if (!isRetry) {
+        // Fetch metadata
+        if (job.source === "civarchive") {
+          metadata = await fetchCivArchiveMetadata(job.url);
+        } else if (job.source === "civitai") {
+          const token = getToken("civitai");
+          metadata = await fetchCivitaiMetadata(job.url, token);
+        } else if (job.source === "huggingface") {
+          const token = getToken("huggingface");
+          metadata = await fetchHuggingFaceMetadata(job.url, token);
+        } else {
+          throw new Error(`Unsupported source: ${job.source}`);
+        }
+
+        job.modelName = metadata.modelName;
+        job.modelId = metadata.modelId;
+        job.versionId = metadata.versionId;
+        job.versionName = metadata.versionName;
+        this.updateJob(job);
       }
 
-      job.modelName = metadata.modelName;
-      job.modelId = metadata.modelId;
-      job.versionId = metadata.versionId;
-      job.versionName = metadata.versionName;
-      this.updateJob(job);
-
-      // Find the primary file to download
-      const file = metadata.files[0];
-      if (!file) {
-        throw new Error("No files available to download");
-      }
-
-      // Find a download URL
-      let downloadUrl: string | undefined;
+      let downloadUrl = job.downloadUrl;
+      let destPath = job.filePath;
+      let extraDataDir: string | undefined;
       let authHeaders: Record<string, string> = {};
 
-      if (file.downloadUrl) {
-        downloadUrl = file.downloadUrl;
-      } else if (file.mirrors) {
-        const availableMirror = file.mirrors.find((m) => m.available);
-        if (availableMirror) {
-          downloadUrl = availableMirror.url;
+      if (!isRetry && metadata) {
+        // Find the primary file to download
+        const file = metadata.files[0];
+        if (!file) {
+          throw new Error("No files available to download");
+        }
+
+        // Find a download URL
+        if (file.downloadUrl) {
+          downloadUrl = file.downloadUrl;
+        } else if (file.mirrors) {
+          const availableMirror = file.mirrors.find((m) => m.available);
+          if (availableMirror) {
+            downloadUrl = availableMirror.url;
+          }
+        }
+
+        if (!downloadUrl) {
+          throw new Error("No download URL available");
+        }
+
+        // Save download URL for resume/retry
+        job.downloadUrl = downloadUrl;
+        this.updateJob(job);
+
+        // Determine output directory
+        const TYPE_DIR_MAP: Record<string, string> = {
+          LORA: "loras",
+          Checkpoint: "diffusion_models",
+          VAE: "vae",
+          ControlNet: "controlnet",
+          TextualInversion: "embeddings",
+          Upscaler: "upscale_models",
+        };
+
+        const BASE_MODEL_DIR_MAP: Record<string, string> = {
+          ZImageTurbo: "zit",
+          Qwen: "qwen",
+          "Qwen Image": "qwen",
+          "Flux.2 Klein 9B": "qwen",
+        };
+
+        const modelDir = getConfig().modelDir;
+        const modelNameClean = metadata.modelName.replace(/[<>:"/\\|?*]/g, "");
+        let outputDir: string;
+
+        if (job.outputDir) {
+          outputDir = path.join(path.resolve(job.outputDir), modelNameClean);
+        } else {
+          const typeDir = TYPE_DIR_MAP[metadata.modelType] ?? "other";
+          const baseModelDir =
+            BASE_MODEL_DIR_MAP[metadata.baseModel ?? ""] ??
+            metadata.baseModel?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ??
+            "unknown";
+          outputDir = path.join(modelDir, typeDir, baseModelDir, modelNameClean);
+        }
+
+        job.outputDir = outputDir;
+        extraDataDir = path.join(
+          outputDir,
+          `extra_data-vid_${metadata.versionId}`
+        );
+        fs.mkdirSync(extraDataDir, { recursive: true });
+
+        // Build filename
+        const ext = path.extname(file.name);
+        const baseName = file.name.replace(ext, "");
+        const destFilename = `${baseName}-mid_${metadata.modelId}-vid_${metadata.versionId}${ext}`;
+        destPath = path.join(outputDir, destFilename);
+
+        job.fileName = destFilename;
+        job.filePath = destPath;
+        this.updateJob(job);
+      } else {
+        // Retry case - set up extraDataDir from existing job data
+        if (job.outputDir && job.versionId) {
+          extraDataDir = path.join(
+            job.outputDir,
+            `extra_data-vid_${job.versionId}`
+          );
         }
       }
 
-      if (!downloadUrl) {
-        throw new Error("No download URL available");
+      if (!downloadUrl || !destPath) {
+        throw new Error("Missing download URL or destination path");
       }
 
       // Add auth headers if needed
@@ -200,57 +274,13 @@ class JobManager {
         }
       }
 
-      // Determine output directory
-      const TYPE_DIR_MAP: Record<string, string> = {
-        LORA: "loras",
-        Checkpoint: "diffusion_models",
-        VAE: "vae",
-        ControlNet: "controlnet",
-        TextualInversion: "embeddings",
-        Upscaler: "upscale_models",
-      };
+      // Check if file is already complete
+      const fileExists = fs.existsSync(destPath);
+      const existingSize = fileExists ? fs.statSync(destPath).size : 0;
+      const expectedSize = job.progress.total;
 
-      const BASE_MODEL_DIR_MAP: Record<string, string> = {
-        ZImageTurbo: "zit",
-        Qwen: "qwen",
-        "Qwen Image": "qwen",
-        "Flux.2 Klein 9B": "qwen",
-      };
-
-      const modelDir = getConfig().modelDir;
-      const modelNameClean = metadata.modelName.replace(/[<>:"/\\|?*]/g, "");
-      let outputDir: string;
-
-      if (job.outputDir) {
-        outputDir = path.join(path.resolve(job.outputDir), modelNameClean);
-      } else {
-        const typeDir = TYPE_DIR_MAP[metadata.modelType] ?? "other";
-        const baseModelDir =
-          BASE_MODEL_DIR_MAP[metadata.baseModel ?? ""] ??
-          metadata.baseModel?.toLowerCase().replace(/[^a-z0-9]+/g, "_") ??
-          "unknown";
-        outputDir = path.join(modelDir, typeDir, baseModelDir, modelNameClean);
-      }
-
-      job.outputDir = outputDir;
-      const extraDataDir = path.join(
-        outputDir,
-        `extra_data-vid_${metadata.versionId}`
-      );
-      fs.mkdirSync(extraDataDir, { recursive: true });
-
-      // Build filename
-      const ext = path.extname(file.name);
-      const baseName = file.name.replace(ext, "");
-      const destFilename = `${baseName}-mid_${metadata.modelId}-vid_${metadata.versionId}${ext}`;
-      const destPath = path.join(outputDir, destFilename);
-
-      job.fileName = destFilename;
-      job.filePath = destPath;
-      this.updateJob(job);
-
-      // Download the file
-      if (!fs.existsSync(destPath)) {
+      // Only download if file doesn't exist or is incomplete
+      if (!fileExists || (expectedSize > 0 && existingSize < expectedSize)) {
         await downloadFile(downloadUrl, destPath, {
           headers: authHeaders,
           signal: abortController.signal,
@@ -261,37 +291,39 @@ class JobManager {
         });
       }
 
-      // Save model_dict JSON
-      const modelDict = buildModelDict(metadata);
-      const dictPath = path.join(
-        extraDataDir,
-        `model_dict-mid_${metadata.modelId}-vid_${metadata.versionId}.json`
-      );
-      fs.writeFileSync(dictPath, JSON.stringify(modelDict, null, 2));
+      // Save model_dict JSON (only on first download, not retry)
+      if (metadata && extraDataDir) {
+        const modelDict = buildModelDict(metadata);
+        const dictPath = path.join(
+          extraDataDir,
+          `model_dict-mid_${metadata.modelId}-vid_${metadata.versionId}.json`
+        );
+        fs.writeFileSync(dictPath, JSON.stringify(modelDict, null, 2));
 
-      // Download images
-      const images = metadata.images ?? [];
-      for (const img of images) {
-        try {
-          const imgExt =
-            path.extname(new URL(img.url).pathname) || ".jpeg";
-          const imgFilename = `${img.id}${imgExt}`;
-          const imgPath = path.join(extraDataDir, imgFilename);
-          const sidecarPath = path.join(extraDataDir, `${img.id}.json`);
+        // Download images
+        const images = metadata.images ?? [];
+        for (const img of images) {
+          try {
+            const imgExt =
+              path.extname(new URL(img.url).pathname) || ".jpeg";
+            const imgFilename = `${img.id}${imgExt}`;
+            const imgPath = path.join(extraDataDir, imgFilename);
+            const sidecarPath = path.join(extraDataDir, `${img.id}.json`);
 
-          // Save sidecar JSON
-          fs.writeFileSync(
-            sidecarPath,
-            JSON.stringify(buildImageSidecar(img), null, 2)
-          );
+            // Save sidecar JSON
+            fs.writeFileSync(
+              sidecarPath,
+              JSON.stringify(buildImageSidecar(img), null, 2)
+            );
 
-          // Download image if not exists
-          if (!fs.existsSync(imgPath)) {
-            const imgBuffer = await downloadToBuffer(img.url);
-            fs.writeFileSync(imgPath, imgBuffer);
+            // Download image if not exists
+            if (!fs.existsSync(imgPath)) {
+              const imgBuffer = await downloadToBuffer(img.url);
+              fs.writeFileSync(imgPath, imgBuffer);
+            }
+          } catch {
+            // Ignore image download errors
           }
-        } catch {
-          // Ignore image download errors
         }
       }
 
@@ -358,6 +390,38 @@ class JobManager {
       }
     }
     this.saveJobs();
+  }
+
+  async retryJob(id: string): Promise<DownloadJob | null> {
+    const job = this.jobs.get(id);
+    if (!job) return null;
+
+    // Only retry failed or cancelled jobs
+    if (job.status !== "failed" && job.status !== "cancelled") {
+      return null;
+    }
+
+    // Check if already active
+    if (this.activeDownloads.has(id)) {
+      return null;
+    }
+
+    // Reset job state for retry
+    job.status = "pending";
+    job.error = undefined;
+    job.retryCount = (job.retryCount ?? 0) + 1;
+    job.updatedAt = new Date().toISOString();
+
+    // Keep progress if we have a partial file
+    if (job.filePath && fs.existsSync(job.filePath)) {
+      const stats = fs.statSync(job.filePath);
+      job.progress.downloaded = stats.size;
+    }
+
+    this.updateJob(job);
+    this.startDownload(job);
+
+    return job;
   }
 }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, CheckCircle, XCircle, Loader2 } from "lucide-react";
+import { X, CheckCircle, XCircle, Loader2, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DownloadProgress {
@@ -20,11 +20,13 @@ interface DownloadJob {
   fileName?: string;
   progress: DownloadProgress;
   error?: string;
+  retryCount?: number;
 }
 
 interface DownloadProgressProps {
   job: DownloadJob;
   onCancel?: (id: string) => void;
+  onRetry?: (id: string) => void;
 }
 
 function formatBytes(bytes: number): string {
@@ -47,6 +49,7 @@ function formatDuration(seconds: number): string {
 export function DownloadProgressItem({
   job,
   onCancel,
+  onRetry,
 }: DownloadProgressProps) {
   const isActive = job.status === "downloading" || job.status === "pending";
   const isCompleted = job.status === "completed";
@@ -77,18 +80,31 @@ export function DownloadProgressItem({
             <div className="font-medium text-sm truncate">
               {job.modelName ?? "Loading..."}
             </div>
-            {isActive && onCancel && (
-              <button
-                onClick={() => onCancel(job.id)}
-                className="flex-shrink-0 p-1 rounded text-muted hover:text-foreground hover:bg-card-hover transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            <div className="flex items-center gap-1">
+              {isFailed && onRetry && (
+                <button
+                  onClick={() => onRetry(job.id)}
+                  className="flex-shrink-0 p-1 rounded text-accent hover:text-accent/80 hover:bg-card-hover transition-colors"
+                  title="Retry download"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                </button>
+              )}
+              {isActive && onCancel && (
+                <button
+                  onClick={() => onCancel(job.id)}
+                  className="flex-shrink-0 p-1 rounded text-muted hover:text-foreground hover:bg-card-hover transition-colors"
+                  title="Cancel download"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="text-xs text-muted truncate mt-0.5">
             {job.fileName ?? job.source}
+            {job.retryCount ? ` (retry ${job.retryCount})` : ""}
           </div>
 
           {isActive && (
@@ -116,8 +132,17 @@ export function DownloadProgressItem({
             </div>
           )}
 
-          {isFailed && job.error && (
-            <div className="text-xs text-red-400 mt-1">{job.error}</div>
+          {isFailed && (
+            <div className="mt-1 space-y-1">
+              {job.error && (
+                <div className="text-xs text-red-400">{job.error}</div>
+              )}
+              {job.progress.downloaded > 0 && (
+                <div className="text-xs text-muted">
+                  {formatBytes(job.progress.downloaded)} downloaded - click retry to resume
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

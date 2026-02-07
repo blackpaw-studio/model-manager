@@ -22,6 +22,7 @@ interface DownloadJob {
   fileName?: string;
   progress: DownloadProgress;
   error?: string;
+  retryCount?: number;
 }
 
 interface DownloadDialogProps {
@@ -68,15 +69,21 @@ export function DownloadDialog({
       const res = await fetch("/api/downloads");
       if (res.ok) {
         const data = await res.json();
-        const active = data.jobs.filter(
+        // Show active and failed jobs (not completed)
+        const relevant = data.jobs.filter(
           (j: DownloadJob) =>
-            j.status === "pending" || j.status === "downloading"
+            j.status === "pending" ||
+            j.status === "downloading" ||
+            j.status === "failed" ||
+            j.status === "cancelled"
         );
-        setActiveJobs(active);
+        setActiveJobs(relevant);
 
         // Subscribe to progress for active jobs
-        for (const job of active) {
-          subscribeToJob(job.id);
+        for (const job of relevant) {
+          if (job.status === "pending" || job.status === "downloading") {
+            subscribeToJob(job.id);
+          }
         }
       }
     } catch {
@@ -87,20 +94,21 @@ export function DownloadDialog({
   const handleJobUpdate = useCallback((job: DownloadJob) => {
     setActiveJobs((prev) => {
       const idx = prev.findIndex((j) => j.id === job.id);
-      if (idx === -1) return prev;
+      if (idx === -1) {
+        // Job not in list, add it if it's relevant
+        if (job.status !== "completed") {
+          return [job, ...prev];
+        }
+        return prev;
+      }
 
       const updated = [...prev];
       updated[idx] = job;
 
-      // Remove completed/failed jobs after a delay
-      if (
-        job.status === "completed" ||
-        job.status === "failed" ||
-        job.status === "cancelled"
-      ) {
-        if (job.status === "completed") {
-          onDownloadComplete?.();
-        }
+      // Only auto-remove completed jobs after a delay
+      // Keep failed jobs visible for retry
+      if (job.status === "completed") {
+        onDownloadComplete?.();
         setTimeout(() => {
           setActiveJobs((curr) => curr.filter((j) => j.id !== job.id));
         }, 3000);
@@ -171,6 +179,20 @@ export function DownloadDialog({
   async function handleCancel(jobId: string) {
     try {
       await fetch(`/api/downloads/${jobId}`, { method: "DELETE" });
+    } catch {
+      // Ignore errors
+    }
+  }
+
+  async function handleRetry(jobId: string) {
+    try {
+      const res = await fetch(`/api/downloads/${jobId}`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        // Update job in list and subscribe
+        handleJobUpdate(data.job);
+        subscribeToJob(jobId);
+      }
     } catch {
       // Ignore errors
     }
@@ -267,13 +289,14 @@ export function DownloadDialog({
           {activeJobs.length > 0 && (
             <div className="space-y-2 pt-2 border-t border-border">
               <div className="text-xs font-medium text-muted uppercase tracking-wider">
-                Active Downloads
+                Downloads
               </div>
               {activeJobs.map((job) => (
                 <DownloadProgressItem
                   key={job.id}
                   job={job}
                   onCancel={handleCancel}
+                  onRetry={handleRetry}
                 />
               ))}
             </div>

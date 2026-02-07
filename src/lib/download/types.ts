@@ -27,8 +27,10 @@ export interface DownloadJob {
   fileName?: string;
   filePath?: string;
   outputDir?: string;
+  downloadUrl?: string; // Direct download URL for resume
   progress: DownloadProgress;
   error?: string;
+  retryCount?: number;
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
