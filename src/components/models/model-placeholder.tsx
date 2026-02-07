@@ -320,6 +320,8 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
         <UploadDialog
           file={uploadFile}
           modelId={model.id}
+          versions={model.versions.map((v) => ({ id: v.id, name: v.name }))}
+          selectedVersionId={selectedVersion?.id}
           onClose={() => setUploadFile(null)}
           onSuccess={handleUploadSuccess}
         />
