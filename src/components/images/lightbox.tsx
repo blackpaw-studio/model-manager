@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2, Calendar } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2, Calendar, Download } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import type { ImageInfo, GenerationParams } from "../../lib/types";
@@ -69,6 +69,21 @@ function GenerationParamsPanel({
     navigator.clipboard.writeText(JSON.stringify(params.comfyWorkflow, null, 2));
     setWorkflowCopied(true);
     setTimeout(() => setWorkflowCopied(false), 2000);
+  }, [params?.comfyWorkflow]);
+
+  const handleDownloadWorkflow = useCallback(() => {
+    if (!params?.comfyWorkflow) return;
+    const blob = new Blob([JSON.stringify(params.comfyWorkflow, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "workflow.json";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }, [params?.comfyWorkflow]);
 
   if (!params && !displayPrompt && !isUserUpload) return null;
@@ -200,7 +215,14 @@ function GenerationParamsPanel({
                 </button>
                 {workflowExpanded && (
                   <div className="mt-2">
-                    <div className="flex justify-end mb-1">
+                    <div className="flex justify-end gap-3 mb-1">
+                      <button
+                        onClick={handleDownloadWorkflow}
+                        className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
+                      >
+                        <Download className="h-3 w-3" />
+                        Download
+                      </button>
                       <button
                         onClick={handleCopyWorkflow}
                         className="flex items-center gap-1 text-xs text-muted hover:text-foreground transition-colors"
