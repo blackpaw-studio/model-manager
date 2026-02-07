@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Settings, RefreshCw, Eye, User, LogOut, Download } from "lucide-react";
+import { Search, Settings, RefreshCw, Eye, User, LogOut, Download, Image as ImageIcon } from "lucide-react";
 import { useNsfw } from "../providers/nsfw-provider";
 import { cn } from "../../lib/utils";
 import { DownloadDialog } from "../downloads/download-dialog";
@@ -80,6 +80,15 @@ export function TopBar({
         </div>
 
         <div className="flex items-center gap-2">
+          <Link
+            href="/images"
+            className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors"
+            title="Recent Uploads"
+          >
+            <ImageIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Uploads</span>
+          </Link>
+
           <button
             onClick={() => setShowDownloadDialog(true)}
             className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-sm text-muted hover:text-foreground hover:border-accent/50 transition-colors"
