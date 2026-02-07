@@ -10,6 +10,7 @@ import { ImageGallery } from "../images/image-gallery";
 import { UploadButton } from "../images/upload-button";
 import { UploadDialog } from "../images/upload-dialog";
 import type { ModelDetail, VersionDetail } from "../../lib/types";
+import { apiFetch } from "../../lib/api-client";
 
 const BASE_MODEL_OPTIONS = [
   "ZImageTurbo",
@@ -110,9 +111,8 @@ export function ModelPlaceholder({ model }: { model: ModelDetail }) {
   async function handleSave() {
     setSaving(true);
     try {
-      const res = await fetch(`/api/models/${model.id}`, {
+      const res = await apiFetch(`/api/v1/models/${model.id}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ baseModel: baseModel || null }),
       });
       if (res.ok) {

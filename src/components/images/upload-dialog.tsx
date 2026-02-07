@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Upload, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api-client";
 
 const SAMPLER_OPTIONS = [
   "Euler",
@@ -141,7 +142,7 @@ export function UploadDialog({ file, modelId, versions, selectedVersionId, onClo
         }
       }
 
-      const res = await fetch(`/api/models/${modelId}/images`, {
+      const res = await apiFetch(`/api/v1/models/${modelId}/images`, {
         method: "POST",
         body: formData,
       });

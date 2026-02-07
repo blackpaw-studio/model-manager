@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { FileText, Check, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api-client";
 
 interface NotesEditorProps {
   modelId: number;
@@ -26,9 +27,8 @@ export function NotesEditor({ modelId, initialNotes, onSave }: NotesEditorProps)
       setSaved(false);
 
       try {
-        const res = await fetch(`/api/models/${modelId}`, {
+        const res = await apiFetch(`/api/v1/models/${modelId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ notes: content || null }),
         });
 
