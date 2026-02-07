@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2, Calendar, Download } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2, Calendar, Download, Loader2 } from "lucide-react";
 import { cn, getImageUrl } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import type { ImageInfo, GenerationParams } from "../../lib/types";
 import { apiFetch } from "../../lib/api-client";
+import JSZip from "jszip";
 
 function ParamRow({
   label,
@@ -258,6 +259,7 @@ interface LightboxProps {
 export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: LightboxProps) {
   const [index, setIndex] = useState(initialIndex);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const { isBlurred, revealedIds, toggleReveal } = useNsfw();
 
   const handleDelete = useCallback(async () => {
@@ -298,6 +300,81 @@ export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: L
       setIsDeleting(false);
     }
   }, [modelId, onDelete, images, index, onClose]);
+
+  const handleDownload = useCallback(async () => {
+    const current = images[index];
+    if (!current) return;
+
+    const imageUrl = getImageUrl(current, "full");
+    if (!imageUrl) return;
+
+    setIsDownloading(true);
+
+    try {
+      // Generate filename prefix based on image ID and timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+      const prefix = `image_${current.id}_${timestamp}`;
+
+      // Fetch the image
+      const imageResponse = await fetch(imageUrl);
+      if (!imageResponse.ok) throw new Error("Failed to fetch image");
+      const imageBlob = await imageResponse.blob();
+
+      // Determine image extension from content type
+      const contentType = imageResponse.headers.get("content-type") ?? "image/jpeg";
+      const extMap: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+      };
+      const ext = extMap[contentType] ?? "jpg";
+
+      // Create metadata object
+      const metadata = {
+        id: current.id,
+        width: current.width,
+        height: current.height,
+        nsfwLevel: current.nsfwLevel,
+        prompt: current.prompt,
+        generationParams: current.generationParams
+          ? { ...current.generationParams, comfyWorkflow: undefined }
+          : null,
+        isUserUpload: current.isUserUpload,
+        createdAt: current.createdAt,
+        exportedAt: new Date().toISOString(),
+      };
+
+      // Create zip file
+      const zip = new JSZip();
+      zip.file(`${prefix}.${ext}`, imageBlob);
+      zip.file(`${prefix}_metadata.json`, JSON.stringify(metadata, null, 2));
+
+      // Add workflow if available
+      if (current.generationParams?.comfyWorkflow) {
+        zip.file(
+          `${prefix}_workflow.json`,
+          JSON.stringify(current.generationParams.comfyWorkflow, null, 2)
+        );
+      }
+
+      // Generate and download zip
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${prefix}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert(`Download failed: ${err instanceof Error ? err.message : "Unknown error"}`);
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [images, index]);
 
   const current = images[index];
   const fullUrl = current ? getImageUrl(current, "full") : null;
@@ -350,6 +427,18 @@ export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: L
     <div className="fixed inset-0 z-[100] flex bg-black/95">
       {/* Top right buttons */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        <button
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors disabled:opacity-50"
+          title="Download image with metadata"
+        >
+          {isDownloading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <Download className="h-5 w-5" />
+          )}
+        </button>
         {current?.isUserUpload && onDelete && (
           <button
             onClick={handleDelete}
