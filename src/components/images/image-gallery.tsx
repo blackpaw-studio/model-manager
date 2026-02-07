@@ -15,18 +15,31 @@ function imageUrl(path: string | null | undefined): string | null {
 
 interface ImageGalleryProps {
   images: ImageInfo[];
+  modelId?: number;
+  onImageDeleted?: () => void;
 }
 
-export function ImageGallery({ images }: ImageGalleryProps) {
+export function ImageGallery({ images, modelId, onImageDeleted }: ImageGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [localImages, setLocalImages] = useState(images);
   const { isBlurred, revealedIds, toggleReveal } = useNsfw();
 
-  if (images.length === 0) return null;
+  // Update local images when prop changes
+  if (images !== localImages && images.length !== localImages.length) {
+    setLocalImages(images);
+  }
+
+  const handleDelete = (imageId: number) => {
+    setLocalImages((prev) => prev.filter((img) => img.id !== imageId));
+    onImageDeleted?.();
+  };
+
+  if (localImages.length === 0) return null;
 
   return (
     <>
       <div className="columns-2 gap-3 sm:columns-3 lg:columns-4">
-        {images.map((img, index) => {
+        {localImages.map((img, index) => {
           const thumbUrl = imageUrl(img.thumbPath);
           const shouldBlur =
             isBlurred(img.nsfwLevel) && !revealedIds.has(img.id);
@@ -76,9 +89,11 @@ export function ImageGallery({ images }: ImageGalleryProps) {
 
       {lightboxIndex != null && (
         <Lightbox
-          images={images}
+          images={localImages}
           initialIndex={lightboxIndex}
           onClose={() => setLightboxIndex(null)}
+          modelId={modelId}
+          onDelete={handleDelete}
         />
       )}
     </>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import type { ImageInfo, GenerationParams } from "../../lib/types";
@@ -206,11 +206,42 @@ interface LightboxProps {
   images: ImageInfo[];
   initialIndex: number;
   onClose: () => void;
+  modelId?: number;
+  onDelete?: (imageId: number) => void;
 }
 
-export function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
+export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: LightboxProps) {
   const [index, setIndex] = useState(initialIndex);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { isBlurred, revealedIds, toggleReveal } = useNsfw();
+
+  const handleDelete = useCallback(async () => {
+    if (!modelId || !onDelete) return;
+    const current = images[index];
+    if (!current?.isUserUpload) return;
+
+    if (!confirm("Delete this image?")) return;
+
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/models/${modelId}/images/${current.id}`, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        onDelete(current.id);
+        // If this was the last image, close lightbox
+        if (images.length === 1) {
+          onClose();
+        } else if (index >= images.length - 1) {
+          setIndex(index - 1);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to delete image:", err);
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [modelId, onDelete, images, index, onClose]);
 
   const current = images[index];
   const fullUrl = imageUrl(current?.localPath);
@@ -261,13 +292,25 @@ export function Lightbox({ images, initialIndex, onClose }: LightboxProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex bg-black/95">
-      {/* Close button */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors"
-      >
-        <X className="h-5 w-5" />
-      </button>
+      {/* Top right buttons */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {current?.isUserUpload && onDelete && (
+          <button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-red-900/80 text-red-400 hover:text-white hover:bg-red-800 transition-colors disabled:opacity-50"
+            title="Delete image"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        )}
+        <button
+          onClick={onClose}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-800/80 text-zinc-400 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </div>
 
       {/* Nav arrows */}
       {images.length > 1 && (

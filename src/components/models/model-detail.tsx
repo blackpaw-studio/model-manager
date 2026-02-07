@@ -251,7 +251,7 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
             <UploadButton onFileSelect={setUploadFile} />
           </div>
           {displayImages.length > 0 ? (
-            <ImageGallery images={displayImages} />
+            <ImageGallery images={displayImages} modelId={model.id} onImageDeleted={() => router.refresh()} />
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
               <p className="text-sm text-muted">No images yet. Upload some!</p>
