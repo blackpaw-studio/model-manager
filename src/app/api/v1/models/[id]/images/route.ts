@@ -8,13 +8,14 @@ import { eq, asc } from "drizzle-orm";
 import { getDatabase } from "../../../../../../db";
 import { models, userImages } from "../../../../../../db/schema";
 import { getConfig } from "../../../../../../lib/config";
+import { withApiAuth } from "../../../../../../lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-export async function GET(
+async function getHandler(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -36,7 +37,7 @@ export async function GET(
   return NextResponse.json(imgs);
 }
 
-export async function POST(
+async function postHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
@@ -187,3 +188,6 @@ export async function POST(
 
   return NextResponse.json(result, { status: 201 });
 }
+
+export const GET = withApiAuth(getHandler);
+export const POST = withApiAuth(postHandler);

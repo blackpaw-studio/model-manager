@@ -4,10 +4,11 @@ import { existsSync } from "fs";
 import { eq, and } from "drizzle-orm";
 import { getDatabase } from "../../../../../../../db";
 import { userImages } from "../../../../../../../db/schema";
+import { withApiAuth } from "../../../../../../../lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
+async function getHandler(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; imageId: string }> }
 ) {
@@ -33,7 +34,7 @@ export async function GET(
   return NextResponse.json(image);
 }
 
-export async function PATCH(
+async function patchHandler(
   request: NextRequest,
   { params }: { params: Promise<{ id: string; imageId: string }> }
 ) {
@@ -96,7 +97,7 @@ export async function PATCH(
   return NextResponse.json(updated);
 }
 
-export async function DELETE(
+async function deleteHandler(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string; imageId: string }> }
 ) {
@@ -141,3 +142,7 @@ export async function DELETE(
 
   return NextResponse.json({ success: true });
 }
+
+export const GET = withApiAuth(getHandler);
+export const PATCH = withApiAuth(patchHandler);
+export const DELETE = withApiAuth(deleteHandler);
