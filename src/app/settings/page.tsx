@@ -13,6 +13,7 @@ import {
   EyeOff,
   Copy,
   Check,
+  Globe,
 } from "lucide-react";
 import { TokenSettings } from "@/components/settings/token-settings";
 import { isDesktop, isDesktopMode } from "@/lib/desktop";
@@ -30,6 +31,8 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showRegenerateConfirm, setShowRegenerateConfirm] = useState(false);
+  const [serverPort, setServerPort] = useState<number | null>(null);
+  const [serverAddresses, setServerAddresses] = useState<string[]>([]);
 
   useEffect(() => {
     if (!isDesktopMode) {
@@ -46,6 +49,10 @@ export default function SettingsPage() {
       setAutoScan(val as boolean);
     });
     window.electronAPI.getVersion().then(setAppVersion);
+    window.electronAPI.getServerInfo().then((info) => {
+      setServerPort(info.port);
+      setServerAddresses(info.addresses);
+    });
 
     fetch("/api/auth/api-key")
       .then((res) => (res.ok ? res.json() : null))
@@ -236,6 +243,37 @@ export default function SettingsPage() {
             </button>
           )}
         </section>
+
+        {/* Server */}
+        {serverPort && (
+          <section className="rounded-xl border border-border bg-card p-6">
+            <h2 className="text-lg font-medium mb-4">Server</h2>
+            <p className="text-sm text-muted mb-4">
+              The REST API is available at these addresses. Use the API key above to authenticate requests.
+            </p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 h-10 rounded-lg border border-border bg-background px-3">
+                <Globe className="h-4 w-4 text-muted shrink-0" />
+                <code className="text-sm font-mono text-foreground/90">
+                  http://127.0.0.1:{serverPort}
+                </code>
+                <span className="text-xs text-muted ml-auto">localhost</span>
+              </div>
+              {serverAddresses.map((addr) => (
+                <div
+                  key={addr}
+                  className="flex items-center gap-2 h-10 rounded-lg border border-border bg-background px-3"
+                >
+                  <Globe className="h-4 w-4 text-muted shrink-0" />
+                  <code className="text-sm font-mono text-foreground/90">
+                    http://{addr}:{serverPort}
+                  </code>
+                  <span className="text-xs text-muted ml-auto">network</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Scanning */}
         <section className="rounded-xl border border-border bg-card p-6">
