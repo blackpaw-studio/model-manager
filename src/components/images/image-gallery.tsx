@@ -1,17 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { cn } from "../../lib/utils";
+import { cn, getImageUrl } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import { Lightbox } from "./lightbox";
 import type { ImageInfo } from "../../lib/types";
-
-function imageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  // Ensure path starts with /
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `/api/images${normalizedPath}`;
-}
 
 interface ImageGalleryProps {
   images: ImageInfo[];
@@ -40,7 +33,7 @@ export function ImageGallery({ images, modelId, onImageDeleted }: ImageGalleryPr
     <>
       <div className="columns-2 gap-3 sm:columns-3 lg:columns-4">
         {localImages.map((img, index) => {
-          const thumbUrl = imageUrl(img.thumbPath);
+          const thumbUrl = getImageUrl(img, "thumb");
           const shouldBlur =
             isBlurred(img.nsfwLevel) && !revealedIds.has(img.id);
 

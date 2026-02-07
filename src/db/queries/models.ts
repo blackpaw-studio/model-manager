@@ -259,12 +259,11 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
     .all();
 
   // Separate model-level images (no versionId) from version-specific images
+  // Note: File paths not included for security - clients use ID-based routes
   const modelLevelImages = allUserImages
     .filter((img) => img.versionId == null)
     .map((img) => ({
       id: img.id,
-      localPath: img.localPath,
-      thumbPath: img.thumbPath,
       width: img.width,
       height: img.height,
       nsfwLevel: img.nsfwLevel ?? 0,
@@ -277,14 +276,13 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
     }));
 
   // Create a map of version-specific user images
+  // Note: File paths not included for security - clients use ID-based routes
   const versionUserImagesMap = new Map<number, ImageInfo[]>();
   for (const img of allUserImages) {
     if (img.versionId != null) {
       const existing = versionUserImagesMap.get(img.versionId) ?? [];
       existing.push({
         id: img.id,
-        localPath: img.localPath,
-        thumbPath: img.thumbPath,
         width: img.width,
         height: img.height,
         nsfwLevel: img.nsfwLevel ?? 0,

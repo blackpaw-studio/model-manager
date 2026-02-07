@@ -97,8 +97,10 @@ export interface FileDetail {
 
 export interface ImageInfo {
   id: number;
-  localPath: string | null;
-  thumbPath: string | null;
+  /** @deprecated File paths are no longer returned for security. Use ID-based routes instead. */
+  localPath?: string | null;
+  /** @deprecated File paths are no longer returned for security. Use ID-based routes instead. */
+  thumbPath?: string | null;
   width: number | null;
   height: number | null;
   nsfwLevel: number;

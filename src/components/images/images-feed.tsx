@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Image as ImageIcon, Box, LayoutGrid, List } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
-import { cn } from "@/lib/utils";
+import { cn, getImageUrl } from "@/lib/utils";
 import { useNsfw } from "@/components/providers/nsfw-provider";
 import { Lightbox } from "@/components/images/lightbox";
 import type { ImageInfo } from "@/lib/types";
@@ -16,12 +16,6 @@ interface FeedImage extends ImageInfo {
   versionId: number | null;
   modelName: string | null;
   modelType: string | null;
-}
-
-function imageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `/api/images${normalizedPath}`;
 }
 
 function formatDate(dateStr: string): string {
@@ -104,8 +98,6 @@ export function ImagesFeed() {
   // Convert to ImageInfo array for lightbox
   const lightboxImages: ImageInfo[] = images.map((img) => ({
     id: img.id,
-    localPath: img.localPath,
-    thumbPath: img.thumbPath,
     width: img.width,
     height: img.height,
     nsfwLevel: img.nsfwLevel,
@@ -179,7 +171,8 @@ export function ImagesFeed() {
           <>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {images.map((img, index) => {
-                const thumbUrl = imageUrl(img.thumbPath);
+                // All images in the feed are user uploads
+                const thumbUrl = getImageUrl({ ...img, isUserUpload: true }, "thumb");
                 const shouldBlur =
                   isBlurred(img.nsfwLevel) && !revealedIds.has(img.id);
 
@@ -259,7 +252,8 @@ export function ImagesFeed() {
           /* Feed View - social network style */
           <div className="space-y-6">
             {images.map((img, index) => {
-              const fullUrl = imageUrl(img.localPath);
+              // All images in the feed are user uploads
+              const fullUrl = getImageUrl({ ...img, isUserUpload: true }, "full");
               const shouldBlur =
                 isBlurred(img.nsfwLevel) && !revealedIds.has(img.id);
 

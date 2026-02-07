@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createReadStream } from "fs";
 import { access, stat } from "fs/promises";
 import path from "path";
-import { getConfig } from "../../../../lib/config";
-import { validateApiKey } from "../../../../lib/api-key";
-import { validateSession } from "../../../../lib/session";
+import { eq } from "drizzle-orm";
+import { getDatabase } from "../../../../../../db";
+import { userImages } from "../../../../../../db/schema";
+import { validateApiKey } from "../../../../../../lib/api-key";
+import { validateSession } from "../../../../../../lib/session";
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -16,7 +18,7 @@ const MIME_TYPES: Record<string, string> = {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ path: string[] }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   // Check for API key in header OR valid session cookie
   const authHeader = request.headers.get("Authorization");
@@ -34,43 +36,42 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { path: pathSegments } = await params;
-  let imagePath = "/" + pathSegments.join("/");
+  const { id } = await params;
+  const imageId = parseInt(id, 10);
 
-  const config = getConfig();
-
-  // Handle relative .data/ paths by converting to absolute
-  if (imagePath.startsWith("/.data/")) {
-    imagePath = path.join(process.cwd(), imagePath.slice(1));
+  if (isNaN(imageId)) {
+    return NextResponse.json({ error: "Invalid image ID" }, { status: 400 });
   }
 
-  // Security: prevent directory traversal
-  const normalizedPath = path.normalize(imagePath);
-  if (normalizedPath.includes("..")) {
-    return NextResponse.json({ error: "Invalid path" }, { status: 400 });
+  const db = getDatabase();
+  const image = db
+    .select({ thumbPath: userImages.thumbPath, localPath: userImages.localPath })
+    .from(userImages)
+    .where(eq(userImages.id, imageId))
+    .get();
+
+  if (!image) {
+    return NextResponse.json({ error: "Image not found" }, { status: 404 });
   }
 
-  // Verify the file is within allowed directories
-  const allowedPrefixes = [config.modelDir, config.thumbDir, config.uploadDir];
-  const isAllowed = allowedPrefixes.some((prefix) =>
-    normalizedPath.startsWith(prefix)
-  );
+  // Fall back to localPath if no thumbnail exists
+  const imagePath = image.thumbPath ?? image.localPath;
 
-  if (!isAllowed) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!imagePath) {
+    return NextResponse.json({ error: "No image file available" }, { status: 404 });
   }
 
   try {
-    await access(normalizedPath);
+    await access(imagePath);
   } catch {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
+    return NextResponse.json({ error: "File not found" }, { status: 404 });
   }
 
-  const ext = path.extname(normalizedPath).toLowerCase();
+  const ext = path.extname(imagePath).toLowerCase();
   const contentType = MIME_TYPES[ext] ?? "application/octet-stream";
 
-  const fileStats = await stat(normalizedPath);
-  const stream = createReadStream(normalizedPath);
+  const fileStats = await stat(imagePath);
+  const stream = createReadStream(imagePath);
   const webStream = new ReadableStream({
     start(controller) {
       stream.on("data", (chunk) => controller.enqueue(chunk));

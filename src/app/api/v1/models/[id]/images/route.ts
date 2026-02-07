@@ -34,7 +34,10 @@ async function getHandler(
     .orderBy(asc(userImages.sortOrder))
     .all();
 
-  return NextResponse.json(imgs);
+  // Strip file paths from response for security - use ID-based routes instead
+  const sanitized = imgs.map(({ localPath, thumbPath, ...rest }) => rest);
+
+  return NextResponse.json(sanitized);
 }
 
 async function postHandler(
@@ -189,7 +192,10 @@ async function postHandler(
     .returning()
     .get();
 
-  return NextResponse.json(result, { status: 201 });
+  // Strip file paths from response for security
+  const { localPath: _lp, thumbPath: _tp, ...sanitizedResult } = result;
+
+  return NextResponse.json(sanitizedResult, { status: 201 });
 }
 
 export const GET = withApiAuth(getHandler);

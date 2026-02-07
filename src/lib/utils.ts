@@ -54,3 +54,32 @@ export function formatSizeKb(sizeKb: number | null | undefined): string {
   if (sizeKb == null) return "—";
   return formatFileSize(sizeKb * 1024);
 }
+
+/**
+ * Get the URL for an image.
+ * - User uploads (isUserUpload=true): Use ID-based routes for security
+ * - Scanner images (isUserUpload=false): Use path-based routes with thumbPath/localPath
+ */
+export function getImageUrl(
+  image: {
+    id: number;
+    localPath?: string | null;
+    thumbPath?: string | null;
+    isUserUpload?: boolean;
+  },
+  variant: "full" | "thumb" = "full"
+): string | null {
+  if (image.isUserUpload) {
+    // User uploads use ID-based routes (paths not exposed in API)
+    return variant === "thumb"
+      ? `/api/images/upload/${image.id}/thumb`
+      : `/api/images/upload/${image.id}`;
+  }
+
+  // Scanner images use path-based routes
+  const path = variant === "thumb" ? (image.thumbPath ?? image.localPath) : image.localPath;
+  if (!path) return null;
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `/api/images${normalizedPath}`;
+}

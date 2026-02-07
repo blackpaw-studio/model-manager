@@ -1,4 +1,4 @@
-import { randomBytes } from "crypto";
+import { randomBytes, timingSafeEqual } from "crypto";
 import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from "fs";
 import path from "path";
 import { getConfig } from "./config";
@@ -38,9 +38,15 @@ export function validateSession(token: string): boolean {
   }
   try {
     const session: SessionData = JSON.parse(readFileSync(sessionPath, "utf-8"));
-    if (session.token !== token) {
+
+    // Timing-safe comparison to prevent timing attacks
+    if (token.length !== session.token.length) {
       return false;
     }
+    if (!timingSafeEqual(Buffer.from(token), Buffer.from(session.token))) {
+      return false;
+    }
+
     if (new Date(session.expiresAt) < new Date()) {
       destroySession();
       return false;

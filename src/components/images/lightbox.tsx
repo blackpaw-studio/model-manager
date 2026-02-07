@@ -2,17 +2,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight, Copy, Check, ChevronDown, ChevronUp, Trash2, Calendar, Download } from "lucide-react";
-import { cn } from "../../lib/utils";
+import { cn, getImageUrl } from "../../lib/utils";
 import { useNsfw } from "../providers/nsfw-provider";
 import type { ImageInfo, GenerationParams } from "../../lib/types";
 import { apiFetch } from "../../lib/api-client";
-
-function imageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  // Ensure path starts with /
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `/api/images${normalizedPath}`;
-}
 
 function ParamRow({
   label,
@@ -307,7 +300,7 @@ export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: L
   }, [modelId, onDelete, images, index, onClose]);
 
   const current = images[index];
-  const fullUrl = imageUrl(current?.localPath);
+  const fullUrl = current ? getImageUrl(current, "full") : null;
   const shouldBlur =
     current && isBlurred(current.nsfwLevel) && !revealedIds.has(current.id);
 
@@ -334,7 +327,7 @@ export function Lightbox({ images, initialIndex, onClose, modelId, onDelete }: L
     for (const offset of [-1, 1, 2]) {
       const i = index + offset;
       if (i >= 0 && i < images.length) {
-        const url = imageUrl(images[i].localPath);
+        const url = getImageUrl(images[i], "full");
         if (url) {
           const p = new Image();
           p.src = url;

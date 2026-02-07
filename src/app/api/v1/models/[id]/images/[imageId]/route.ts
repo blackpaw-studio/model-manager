@@ -31,7 +31,10 @@ async function getHandler(
     return NextResponse.json({ error: "Image not found" }, { status: 404 });
   }
 
-  return NextResponse.json(image);
+  // Strip file paths from response for security
+  const { localPath, thumbPath, ...sanitized } = image;
+
+  return NextResponse.json(sanitized);
 }
 
 async function patchHandler(
@@ -93,6 +96,12 @@ async function patchHandler(
     .from(userImages)
     .where(eq(userImages.id, imgId))
     .get();
+
+  // Strip file paths from response for security
+  if (updated) {
+    const { localPath, thumbPath, ...sanitized } = updated;
+    return NextResponse.json(sanitized);
+  }
 
   return NextResponse.json(updated);
 }

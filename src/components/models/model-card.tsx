@@ -18,10 +18,10 @@ const TYPE_COLORS: Record<string, string> = {
   Upscaler: "bg-teal-500/20 text-teal-400",
 };
 
-function imageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  // Ensure path starts with /
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+function heroImageUrl(thumbPath: string | null | undefined): string | null {
+  if (!thumbPath) return null;
+  // Hero images are from the scanner (not user uploads), so they use path-based routes
+  const normalizedPath = thumbPath.startsWith("/") ? thumbPath : `/${thumbPath}`;
   return `/api/images${normalizedPath}`;
 }
 
@@ -31,7 +31,7 @@ function ModelCardInner({ model }: { model: ModelListItem }) {
   const shouldBlur =
     isBlurred(heroNsfwLevel) && !revealedIds.has(model.id);
 
-  const thumbUrl = imageUrl(model.heroImage?.thumbPath);
+  const thumbUrl = heroImageUrl(model.heroImage?.thumbPath);
   const typeColor =
     TYPE_COLORS[model.type] ?? "bg-zinc-500/20 text-zinc-400";
 

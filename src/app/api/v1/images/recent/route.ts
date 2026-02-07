@@ -14,13 +14,12 @@ async function handler(request: NextRequest) {
   const db = getDatabase();
 
   // Get recent user-uploaded images with model info
+  // Note: localPath and thumbPath are NOT returned for security - use ID-based routes instead
   const results = db
     .select({
       id: userImages.id,
       modelId: userImages.modelId,
       versionId: userImages.versionId,
-      localPath: userImages.localPath,
-      thumbPath: userImages.thumbPath,
       width: userImages.width,
       height: userImages.height,
       nsfwLevel: userImages.nsfwLevel,
@@ -51,8 +50,6 @@ async function handler(request: NextRequest) {
       id: r.id,
       modelId: r.modelId,
       versionId: r.versionId,
-      localPath: r.localPath,
-      thumbPath: r.thumbPath,
       width: r.width,
       height: r.height,
       nsfwLevel: r.nsfwLevel ?? 0,
