@@ -51,7 +51,8 @@ const RATE_LIMIT_DELAY = 200; // ms between API calls to avoid rate limiting
 async function fetchImageMetadata(
   imageId: number
 ): Promise<CivitaiApiImage | null> {
-  const url = `${API_BASE}/images?imageId=${imageId}`;
+  // Include nsfw=true to fetch NSFW images
+  const url = `${API_BASE}/images?imageId=${imageId}&nsfw=true`;
 
   const res = await fetch(url, {
     headers: {
