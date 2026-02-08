@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2, Upload, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api-client";
+import { notifyImageUploaded } from "@/lib/upload-events";
 
 const SAMPLER_OPTIONS = [
   "Euler",
@@ -151,6 +152,12 @@ export function UploadDialog({ file, modelId, versions, selectedVersionId, onClo
         const data = await res.json();
         throw new Error(data.error || "Upload failed");
       }
+
+      // Parse response to get the new image ID
+      const result = await res.json();
+
+      // Notify other components/tabs about the new upload
+      notifyImageUploaded(modelId, result.id);
 
       onSuccess();
     } catch (err) {

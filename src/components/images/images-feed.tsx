@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api-client";
 import { cn, getImageUrl } from "@/lib/utils";
 import { useNsfw } from "@/components/providers/nsfw-provider";
 import { Lightbox } from "@/components/images/lightbox";
+import { subscribeToUploads } from "@/lib/upload-events";
 import type { ImageInfo } from "@/lib/types";
 
 type ViewMode = "feed" | "grid";
@@ -83,6 +84,14 @@ export function ImagesFeed() {
 
   useEffect(() => {
     fetchImages();
+  }, [fetchImages]);
+
+  // Auto-refresh when a new image is uploaded (works across tabs)
+  useEffect(() => {
+    return subscribeToUploads(() => {
+      // Refresh the feed to show the new image
+      fetchImages();
+    });
   }, [fetchImages]);
 
   const handleLoadMore = () => {
