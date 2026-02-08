@@ -161,7 +161,16 @@ async function postHandler(
   if (comfyWorkflow) {
     console.log("[Upload] comfyWorkflow preview:", String(comfyWorkflow).slice(0, 200));
     try {
-      generationParams.comfyWorkflow = JSON.parse(comfyWorkflow as string);
+      // ComfyUI workflows can contain NaN/Infinity which aren't valid JSON
+      // Replace them with null before parsing
+      const sanitized = String(comfyWorkflow)
+        .replace(/:\s*NaN\b/g, ": null")
+        .replace(/:\s*Infinity\b/g, ": null")
+        .replace(/:\s*-Infinity\b/g, ": null")
+        .replace(/\[NaN\]/g, "[null]")
+        .replace(/\[Infinity\]/g, "[null]")
+        .replace(/\[-Infinity\]/g, "[null]");
+      generationParams.comfyWorkflow = JSON.parse(sanitized);
       console.log("[Upload] comfyWorkflow parsed successfully, keys:", Object.keys(generationParams.comfyWorkflow as object));
     } catch (err) {
       console.error("[Upload] comfyWorkflow JSON parse error:", err);

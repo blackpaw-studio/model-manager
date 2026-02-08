@@ -136,8 +136,17 @@ export function UploadDialog({ file, modelId, versions, selectedVersionId, onClo
 
       if (workflowJson.trim()) {
         try {
-          JSON.parse(workflowJson);
-          formData.append("comfyWorkflow", workflowJson);
+          // ComfyUI workflows can contain NaN/Infinity which aren't valid JSON
+          // Sanitize before validation and sending
+          const sanitized = workflowJson
+            .replace(/:\s*NaN\b/g, ": null")
+            .replace(/:\s*Infinity\b/g, ": null")
+            .replace(/:\s*-Infinity\b/g, ": null")
+            .replace(/\[NaN\]/g, "[null]")
+            .replace(/\[Infinity\]/g, "[null]")
+            .replace(/\[-Infinity\]/g, "[null]");
+          JSON.parse(sanitized);
+          formData.append("comfyWorkflow", sanitized);
         } catch {
           throw new Error("Invalid workflow JSON");
         }
