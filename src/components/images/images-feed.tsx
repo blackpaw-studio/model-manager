@@ -96,6 +96,17 @@ export function ImagesFeed() {
     });
   }, [fetchImages]);
 
+  // Refresh when page becomes visible (user switches back to this tab)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchImages();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [fetchImages]);
+
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
       fetchImages(images.length, true);
