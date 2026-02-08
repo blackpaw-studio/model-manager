@@ -272,6 +272,7 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
             </h2>
             <div
               className="prose prose-sm prose-invert max-w-none rounded-xl border border-border bg-card p-4"
+              suppressHydrationWarning
               dangerouslySetInnerHTML={{
                 __html: sanitizeHtml(model.description),
               }}
