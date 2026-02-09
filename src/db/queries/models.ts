@@ -340,8 +340,9 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
     // Get version-specific user images
     const versionUserImages = versionUserImagesMap.get(v.id) ?? [];
 
-    // Combine: user uploads (version-specific + model-level) first, then metadata images
-    const allImages = [...versionUserImages, ...modelLevelImages, ...versionImages];
+    // Combine: version-specific user uploads first, then metadata images
+    // Model-level uploads are returned separately in modelLevelImages
+    const allImages = [...versionUserImages, ...versionImages];
 
     return {
       id: v.id,
@@ -387,6 +388,7 @@ export function getModelById(db: DB, id: number): ModelDetail | null {
     hasMetadata: model.hasMetadata,
     versions: versionDetails,
     notes: note?.content ?? null,
+    modelLevelImages,
   };
 }
 

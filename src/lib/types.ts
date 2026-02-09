@@ -66,6 +66,8 @@ export interface ModelDetail {
   hasMetadata: boolean;
   versions: VersionDetail[];
   notes?: string | null;
+  /** User-uploaded images that apply to all versions (model-level uploads) */
+  modelLevelImages?: ImageInfo[];
 }
 
 export interface VersionDetail {

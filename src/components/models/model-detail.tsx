@@ -243,11 +243,24 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
           </div>
         )}
 
+        {/* My Uploads section - model-level uploads shown separately */}
+        {model.modelLevelImages && model.modelLevelImages.length > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
+                My Uploads
+              </h2>
+              <UploadButton onFileSelect={setUploadFile} />
+            </div>
+            <ImageGallery images={model.modelLevelImages} modelId={model.id} onImageDeleted={() => router.refresh()} />
+          </div>
+        )}
+
         {/* Image gallery */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted">
-              Images
+              {selectedVersion?.name ? `${selectedVersion.name} Images` : "Images"}
             </h2>
             <UploadButton onFileSelect={setUploadFile} />
           </div>
@@ -255,7 +268,9 @@ export function ModelDetailView({ model }: { model: ModelDetail }) {
             <ImageGallery images={displayImages} modelId={model.id} onImageDeleted={() => router.refresh()} />
           ) : (
             <div className="rounded-xl border border-dashed border-border bg-card/50 p-8 text-center">
-              <p className="text-sm text-muted">No images yet. Upload some!</p>
+              <p className="text-sm text-muted">
+                {model.modelLevelImages?.length ? "No version-specific images" : "No images yet. Upload some!"}
+              </p>
             </div>
           )}
         </div>
