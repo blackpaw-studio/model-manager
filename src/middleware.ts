@@ -48,10 +48,11 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
+     * - api (API routes - they handle their own auth and may have large bodies)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    "/((?!_next/static|_next/image).*)",
+    "/((?!api|_next/static|_next/image).*)",
   ],
 };
